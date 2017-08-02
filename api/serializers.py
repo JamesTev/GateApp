@@ -1,5 +1,6 @@
-from rest_framework import serializers
+from rest_framework import serializers, exceptions
 from django.contrib.auth.models import User
+from django.utils import timezone
 from .models import Guest, GateActivity, GuestPermission
 
 
@@ -70,4 +71,38 @@ class CreateUserSerializer(serializers.ModelSerializer):
         return user
 
 
+class UserGateActivitySerializer(serializers.ModelSerializer):
+
+    responsible_user = serializers.ReadOnlyField(source='responsible_user.username')
+
+    class Meta:
+        model = GateActivity
+        fields = ('id', 'date', 'responsible_user', 'gate_status')
+        read_only_fields = ('date', 'responsible_guest')
+
+
+class GuestGateActivitySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = GateActivity
+        fields = ('id', 'date', 'responsible_guest', 'gate_status')
+        read_only_fields = ('date', 'responsible_guest')
+
+    def validate(self, data):
+        if timezone.now() > data['expires_on']:
+            raise exceptions.PermissionDenied(detail="Permission expired on {0}".format(data['expires_on']))
+        elif timezone.now() < data['starts_on']:
+            raise exceptions.PermissionDenied(detail="Permission not yet active. Activation begins {0}".format(data['starts_on']))
+        elif data['once_off'] and data['once_off_used']:
+            raise exceptions.PermissionDenied(detail="Once of permission has been used")
+        else:
+            return data
+
+
+class GateActivitySerializer(UserGateActivitySerializer):
+    """Serializer for List API view to list all gate activity records (user and guest). Only one of the
+    responsible_x fields will be set in each record."""
+
+    class Meta(UserGateActivitySerializer.Meta):
+        fields = ('id', 'date', 'responsible_user', 'responsible_guest', 'gate_status')
 

@@ -1,5 +1,6 @@
 from rest_framework.permissions import BasePermission
 
+
 class IsSuperUser(BasePermission):
     """Custom permission class to only allow superuser to add/update/delete User records"""
 

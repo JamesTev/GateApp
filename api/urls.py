@@ -9,7 +9,10 @@ urlpatterns = [
     url(r'^guests/$', views.GuestView.as_view(), name="guests"),
     url(r'^guests/(?P<pk>[0-9]+)/$', views.GuestDetailView.as_view(), name="guest_details"),
     url(r'^guests/permissions/$', views.GuestPermissionView.as_view(), name="guest_permissions"),
-    url(r'^guests/permissions/(?P<pk>[0-9]+)/$', views.GuestPermissionDetailView.as_view(), name="guest_permission_detauls")
+    url(r'^guests/permissions/(?P<pk>[0-9]+)/$', views.GuestPermissionDetailView.as_view(), name="guest_permission_details"),
+    url(r'^interactions/$', views.GateInteractionView.as_view(), name="gate_interactions"),
+    url(r'^interactions/user/$', views.UserGateInteractionView.as_view(), name="create_user_gate_interaction"),
+    url(r'^interactions/guest/$', views.GuestGateInteractionView.as_view(), name="create_guest_gate_interaction"),
 ]
 
 # this allows us to specify data format (json, html) when using URLs. Appends format

@@ -29,7 +29,7 @@ class GateActivity(models.Model):
 
     def __str__(self):
         if self.responsible_user:
-            return "Interaction by {0} @ {1}".format(self.responsible_user.name, self.date)
+            return "Interaction by {0} @ {1}".format(self.responsible_user.username, self.date)
         elif self.responsible_guest:
             return "Interaction by {0} {1} @ {2}".format(self.responsible_guest.first_name, self.responsible_guest.surname, self.date)
 

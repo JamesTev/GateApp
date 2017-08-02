@@ -62,7 +62,54 @@ class GuestPermissionView(generics.ListCreateAPIView):
            in serializers.py (permissions and interactions will be empty initially."""
         serializer.save(granted_by=self.request.user, token=get_random_string(length=16))
 
+
 class GuestPermissionDetailView(generics.RetrieveUpdateDestroyAPIView):
     """View extra details on each guest (GET). DELETE and PUT to delete and update record."""
     queryset = GuestPermission.objects.all()
     serializer_class = GuestPermissionSerializer
+
+
+class GateInteractionView(generics.ListAPIView):
+    """Allows GET to appropriate endpoint to list all gate interactions"""
+    queryset = GateActivity.objects.all()
+    serializer_class = GateActivitySerializer
+
+
+class UserGateInteractionView(generics.ListCreateAPIView):
+    """Only allows POST to appropriate endpoint with supplied token to create USER ('staff')
+    gate interaction record (ie for staff user to operate gate). GET only returns
+    user (not guest) interactions."""
+    queryset = GateActivity.objects.filter(responsible_user__isnull=False)
+    serializer_class = UserGateActivitySerializer
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def perform_create(self, serializer):
+        serializer.save(responsible_user=self.request.user)
+
+
+class GuestGateInteractionView(generics.ListCreateAPIView):
+    """POST to appropriate endpoint with supplied token to create GUEST
+    gate interaction record (ie for guest to operate gate). GET only returns
+    guest interactions."""
+    queryset = GateActivity.objects.filter(responsible_guest__isnull=False)  # only guest interactions
+    serializer_class = GuestGateActivitySerializer
+
+    def perform_create(self, serializer):
+
+        try:
+            resp_guest = self.find_guest(self.request.POST['token'])
+        except KeyError:
+            raise serializers.ValidationError(detail="No authentication token supplied.")
+
+        if resp_guest:
+            serializer.save(responsible_guest=resp_guest)
+        else:
+            raise serializers.ValidationError(detail="Invalid token supplied.")
+
+    def find_guest(self, token):
+        try:
+            p = GuestPermission.objects.get(token=token)
+        except:
+            return None
+        return p.guest
+
