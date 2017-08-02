@@ -17,7 +17,7 @@ class GuestSerializer(serializers.ModelSerializer):
         """Meta class to map serializer's fields to model fields."""
         model = Guest
         # can exclude any fields below that shouldn't be displayed by API
-        fields = ('id', 'first_name', 'surname', 'created_by', 'created_on')
+        fields = ('id', 'first_name', 'surname', 'created_by', 'email', 'created_on')
         read_only_fields = ('created_on', 'created_by')
 
 

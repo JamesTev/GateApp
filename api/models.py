@@ -45,6 +45,9 @@ class GuestPermission(models.Model):
     once_off = models.BooleanField(default=False)
     once_off_used = models.BooleanField(default=False)
 
+    def __str__(self):
+        return "Permission for {0} granted by {1}. Expires on {2}".format(self.guest.first_name, self.granted_by.username, self.expires_on)
+
 
 
 

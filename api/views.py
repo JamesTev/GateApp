@@ -1,6 +1,5 @@
-from rest_framework import generics, permissions, status
-from rest_framework.views import APIView
-from rest_framework.response import Response
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import generics, permissions, exceptions
 from django.utils.crypto import get_random_string
 from .serializers import *
 from .models import *
@@ -10,6 +9,8 @@ from .permissions import IsSuperUser
 class UserListView(generics.ListAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    filter_backends = (DjangoFilterBackend,)
+    filter_fields = ('first_name', 'username', 'last_name')
 
 
 class UserDetailView(generics.RetrieveAPIView):
@@ -40,4 +41,12 @@ class GuestDetailView(generics.RetrieveUpdateDestroyAPIView):
     """View extra details on each guest (GET). DELETE and PUT to delete and update record."""
     queryset = Guest.objects.all()
     serializer_class = GuestDetailSerializer
+
+    def delete(self, request, *args, **kwargs):
+        """Override delete method to only allow superuser to delete guest records."""
+        if request.user.is_superuser:
+            return self.destroy(request, *args, **kwargs)
+        else:
+            raise exceptions.PermissionDenied
+
 
