@@ -17,7 +17,7 @@ class GuestSerializer(serializers.ModelSerializer):
         """Meta class to map serializer's fields to model fields."""
         model = Guest
         # can exclude any fields below that shouldn't be displayed by API
-        fields = ('id', 'first_name', 'surname', 'created_by', 'email', 'created_on')
+        fields = ('id', 'first_name', 'surname', 'created_by', 'email', 'mobile', 'created_on')
         read_only_fields = ('created_on', 'created_by')
 
 
@@ -29,7 +29,7 @@ class GuestDetailSerializer(GuestSerializer):
 
     class Meta(GuestSerializer.Meta):
         """Inherit from GuestSerializer - only need to override fields attribute"""
-        fields = ('id', 'first_name', 'surname', 'created_by', 'created_on', 'gate_interactions', 'permissions')
+        fields = ('id', 'first_name', 'surname', 'created_by', 'created_on', 'mobile', 'gate_interactions', 'permissions')
 
 
 class UserSerializer(serializers.ModelSerializer):

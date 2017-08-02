@@ -9,7 +9,8 @@ class Guest(models.Model):
     for their creation etc."""
     first_name = models.CharField(max_length=255, blank=False)
     surname = models.CharField(max_length=255, blank=False)
-    email = models.EmailField(blank=True, unique=True)
+    email = models.EmailField()
+    mobile = models.CharField(max_length=30, unique=True)
     created_by = models.ForeignKey('auth.User', related_name='created_guests', on_delete=models.CASCADE)
     created_on = models.DateTimeField(auto_now_add=True)
 
