@@ -1,5 +1,6 @@
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import generics, permissions, exceptions
+from rest_framework import generics, permissions
+from rest_framework.authentication import SessionAuthentication
 from django.utils.crypto import get_random_string
 from .serializers import *
 from .models import *
@@ -11,6 +12,7 @@ class UserListView(generics.ListAPIView):
     serializer_class = UserSerializer
     filter_backends = (DjangoFilterBackend,)
     filter_fields = ('first_name', 'username', 'last_name')
+    permission_classes = (permissions.IsAuthenticated, )  # expects a set of classes
 
 
 class UserDetailView(generics.RetrieveAPIView):
@@ -28,6 +30,7 @@ class GuestView(generics.ListCreateAPIView):
     """Create (POST) and list (GET) all Guests on this URL. No need to create different endpoint
     for create since permission is same in this case (doesn't require super user)"""
     queryset = Guest.objects.all()
+    permission_classes = (permissions.IsAuthenticated,)  # needs to have user logged in to associate responsible user with new guest
     serializer_class = GuestSerializer
 
     def perform_create(self, serializer):
@@ -51,7 +54,7 @@ class GuestDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class GuestPermissionView(generics.ListCreateAPIView):
-    """Create (POST) and list (GET) all Guests on this URL. No need to create different endpoint
+    """Create (POST) and list (GET) all granted guest permissions. No need to create different endpoint
     for create since permission is same in this case (doesn't require super user)"""
     queryset = GuestPermission.objects.all()
     serializer_class = GuestPermissionSerializer
@@ -84,6 +87,7 @@ class UserGateInteractionView(generics.ListCreateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def perform_create(self, serializer):
+        # override this method in order to explicitly set the responsible user
         serializer.save(responsible_user=self.request.user)
 
 
@@ -93,23 +97,33 @@ class GuestGateInteractionView(generics.ListCreateAPIView):
     guest interactions."""
     queryset = GateActivity.objects.filter(responsible_guest__isnull=False)  # only guest interactions
     serializer_class = GuestGateActivitySerializer
+    permission = None
 
     def perform_create(self, serializer):
 
         try:
-            resp_guest = self.find_guest(self.request.POST['token'])
+            self.permission = GuestPermission.objects.get(token=self.request.POST['token'])
         except KeyError:
-            raise serializers.ValidationError(detail="No authentication token supplied.")
+            raise serializers.ValidationError(detail={'error detail': 'No permission token supplied'})
+        except GuestPermission.DoesNotExist:
+            raise serializers.ValidationError(detail={'error detail': 'Invalid permission token'})
 
-        if resp_guest:
+        resp_guest = self.permission.guest  # extract resp guest from permission
+        if resp_guest and self.check_permission():
             serializer.save(responsible_guest=resp_guest)
+
+    def check_permission(self):
+
+        if timezone.now() > self.permission.expires_on:
+            raise exceptions.PermissionDenied(detail={"error detail": "Permission expired on {0}".format(self.permission.expires_on)})
+        elif timezone.now() < self.permission.starts_on:
+            raise exceptions.PermissionDenied(
+                detail={'error detail': "Permission not yet active. Activation begins {0}".format(self.permission.expires_on)})
+        elif self.permission.once_off and self.permission.once_off_used:
+            raise exceptions.PermissionDenied(detail={'error detail': 'Once off permission already used'})
         else:
-            raise serializers.ValidationError(detail="Invalid token supplied.")
-
-    def find_guest(self, token):
-        try:
-            p = GuestPermission.objects.get(token=token)
-        except:
-            return None
-        return p.guest
-
+            # valid permission if this point is reached
+            if self.permission.once_off:
+                self.permission.once_off_used = True
+                self.permission.save()  # update permission record
+            return True

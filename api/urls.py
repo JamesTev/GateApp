@@ -1,4 +1,4 @@
-from django.conf.urls import url
+from django.conf.urls import url, include
 from rest_framework.urlpatterns import format_suffix_patterns
 from . import views
 
@@ -13,6 +13,7 @@ urlpatterns = [
     url(r'^interactions/$', views.GateInteractionView.as_view(), name="gate_interactions"),
     url(r'^interactions/user/$', views.UserGateInteractionView.as_view(), name="create_user_gate_interaction"),
     url(r'^interactions/guest/$', views.GuestGateInteractionView.as_view(), name="create_guest_gate_interaction"),
+    url(r'^rest-auth/', include('rest_auth.urls'))
 ]
 
 # this allows us to specify data format (json, html) when using URLs. Appends format
